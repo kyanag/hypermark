@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HyperMark</RootNamespace>
+  </PropertyGroup>
+
+  <!-- 编译时生成版本常量类 -->
+  <Target Name="GenerateVersionConstants" BeforeTargets="CoreCompile" Inputs="$(MSBuildThisFileFullPath)" Outputs="$(IntermediateOutputPath)VersionConstants.g.cs">
+    <ItemGroup>
+      <_VersionLine Include="// &lt;auto-generated/&gt;%0D%0Anamespace HyperMark%3B%0D%0A%0D%0Apublic static class VersionConstants%0D%0A{%0D%0A    public const string Version = &quot;$(Version)&quot;%3B%0D%0A}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)VersionConstants.g.cs" Lines="@(_VersionLine)" Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)VersionConstants.g.cs" />
+      <FileWrites Include="$(IntermediateOutputPath)VersionConstants.g.cs" />
+    </ItemGroup>
+  </Target>
+
+</Project>

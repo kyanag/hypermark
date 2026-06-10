@@ -1,0 +1,51 @@
+title: 色花堂
+name: 98tang
+homepage: https://www.sehuatang.net/
+domains:
+    - www.sehuatang.net
+    - sehuatang.net
+routes:
+    -
+      title: 论坛板块
+      name: forum
+      pattern: /forum-{forum_id}-{_}.html
+      args:
+        -
+          name: forum_id
+          title: 板块 id
+          is_required: true
+      std_format: /forum-{forum_id}-1.html
+      tags:
+        - '@forum'
+        - '@categroy'
+        - '@list'
+    -
+      title: 论坛板块
+      name: forum
+      pattern: /forum.php?mod=forumdisplay&fid={forum_id}
+      args:
+        -
+          name: forum_id
+          title: 板块 id
+          is_required: true
+      std_format: /forum-{forum_id}-1.html
+      tags:
+        - '@forum'
+        - '@categroy'
+        - '@list'
+    -
+      title: 帖子
+      name: forum
+      pattern: /forum.php?mod=viewthread&fid={forum_id}
+      args:
+        -
+          name: forum_id
+          title: 板块 id
+          is_required: true
+      std_format: /forum-{forum_id}-1.html
+      tags:
+        - '@forum'
+        - '@categroy'
+        - '@list'
+vars:
+    email: 'sehuatang@gmail.com'

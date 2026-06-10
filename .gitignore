@@ -1,0 +1,31 @@
+# IDE
+/.vscode
+/.vs
+/.idea
+*.user
+*.DotSettings.user
+
+# Build output
+bin/
+obj/
+
+# Publish output
+/publish/
+/publish-desktop/
+
+# Runtime logs
+logs/
+*.log
+
+# Claude Code local settings (keep skills/)
+/.claude/settings.local.json
+
+# Node.js
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files (atomic writes)
+*.tmp

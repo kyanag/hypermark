@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HyperMark 管理</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; }
+
+/* 整体布局 */
+.app { display: flex; height: 100vh; }
+.sidebar {
+  width: 180px; background: #001529; color: #fff; flex-shrink: 0;
+  display: flex; flex-direction: column;
+}
+.sidebar h1 {
+  padding: 20px 16px 16px; font-size: 1.2rem; text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 8px;
+}
+.sidebar .nav-item {
+  padding: 12px 20px; cursor: pointer; border-radius: 4px; margin: 2px 8px;
+  font-size: 0.92rem; color: rgba(255,255,255,0.65); transition: all 0.15s;
+}
+.sidebar .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.sidebar .nav-item.active { background: #1890ff; color: #fff; }
+.main { flex: 1; overflow-y: auto; padding: 24px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* 通用组件 */
+.card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.card-title { font-size: 1rem; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; }
+.form-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: flex-end; }
+.form-row input, .form-row textarea, .form-row select {
+  padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+.form-row input:focus, .form-row textarea:focus, .form-row select:focus {
+  border-color: #1890ff; outline: none; box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+}
+.form-row textarea { resize: vertical; min-height: 80px; font-family: monospace; flex: 1; }
+.form-row input, .form-row select { flex: 1; }
+.form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.form-group label { font-size: 0.85rem; color: #666; font-weight: 500; }
+
+.btn {
+  padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;
+  font-size: 0.9rem; background: #1890ff; color: #fff; transition: all 0.15s;
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;
+}
+.btn:hover { background: #40a9ff; }
+.btn:active { background: #096dd9; }
+.btn-primary { background: #1890ff; }
+.btn-danger { background: #ff4d4f; }
+.btn-danger:hover { background: #ff7875; }
+.btn-success { background: #52c41a; }
+.btn-success:hover { background: #73d13d; }
+.btn-warning { background: #faad14; }
+.btn-warning:hover { background: #ffc53d; }
+.btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+.btn-default:hover { border-color: #1890ff; color: #1890ff; }
+.btn-sm { padding: 4px 10px; font-size: 0.82rem; }
+.btn-icon { padding: 4px 8px; font-size: 0.85rem; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 0.88rem; }
+th { background: #fafafa; font-weight: 600; color: #555; }
+tr:hover { background: #f5f9ff; }
+td.actions { white-space: nowrap; }
+td.actions .btn { margin-right: 4px; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.78rem; margin: 1px 3px 1px 0; }
+.tag-blue { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+.tag-green { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.tag-orange { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.tag-red { background: #fff1f0; color: #ff4d4f; border: 1px solid #ffa39e; }
+.tag-purple { background: #f9f0ff; color: #722ed1; border: 1px solid #d3adf7; }
+.tag-gray { background: #fafafa; color: #8c8c8c; border: 1px solid #d9d9d9; }
+
+.url-cell { max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.url-cell a { color: #1890ff; text-decoration: none; }
+.url-cell a:hover { text-decoration: underline; }
+
+.empty { color: #999; text-align: center; padding: 40px 20px; }
+
+/* Toast */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 10px 20px; border-radius: 6px; color: #fff; font-size: 0.9rem;
+  animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.toast-success { background: #52c41a; }
+.toast-error { background: #ff4d4f; }
+.toast-info { background: #1890ff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45); z-index: 1000; justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 8px; width: 480px; max-width: 90vw;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.2); animation: modalIn 0.2s ease;
+}
+@keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 1rem; }
+.modal-close { cursor: pointer; font-size: 1.2rem; color: #999; background: none; border: none; }
+.modal-close:hover { color: #333; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+/* 分类树 */
+.cat-tree { padding-left: 0; list-style: none; }
+.cat-tree .cat-tree { padding-left: 24px; }
+.cat-item {
+  display: flex; align-items: center; padding: 8px 12px; margin: 2px 0;
+  border-radius: 4px; cursor: grab; user-select: none;
+  border: 1px solid transparent; transition: all 0.15s;
+}
+.cat-item:hover { background: #f0f7ff; border-color: #d0e3f7; }
+.cat-item.dragging { opacity: 0.4; }
+.cat-item.drag-over { border-color: #1890ff; background: #e6f7ff; }
+.cat-item .cat-name { font-weight: 500; flex: 1; }
+.cat-item .cat-count { font-size: 0.8rem; color: #999; margin: 0 8px; }
+.cat-item .cat-actions { display: none; gap: 4px; }
+.cat-item:hover .cat-actions { display: flex; }
+.cat-item.root-node { background: #fafafa; border: 1px dashed #d9d9d9; border-radius: 4px; cursor: default; }
+.cat-item.root-node:hover { background: #fafafa; border-color: #d9d9d9; }
+
+/* 右键菜单 */
+.ctx-menu {
+  position: fixed; z-index: 1001; min-width: 160px; background: #fff;
+  border: 1px solid #e8e8e8; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 4px 0; font-size: 0.88rem;
+}
+.ctx-menu-item { padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.ctx-menu-item:hover { background: #f0f7ff; }
+.ctx-menu-item.danger { color: #ff4d4f; }
+.ctx-divider { height: 1px; background: #f0f0f0; margin: 4px 0; }
+
+/* 分类面板工具栏 */
+.cat-toolbar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+.cat-toolbar input { flex: 1; min-width: 150px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 0.9rem; }
+
+/* 搜索筛选栏 */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.filter-bar input { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; }
+.filter-bar select { padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; min-width: 120px; }
+
+/* 链接标签编辑弹窗 */
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tag-list .tag-item {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;
+  background: #f0f7ff; border: 1px solid #91d5ff; border-radius: 4px; font-size: 0.85rem;
+}
+.tag-list .tag-remove { cursor: pointer; color: #ff4d4f; font-weight: bold; font-size: 0.9rem; }
+.tag-list .tag-remove:hover { color: #cf1322; }
+.tag-select { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-option {
+  padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 4px; cursor: pointer;
+  font-size: 0.85rem; transition: all 0.15s;
+}
+.tag-option:hover { border-color: #1890ff; color: #1890ff; }
+.tag-option.selected { background: #1890ff; color: #fff; border-color: #1890ff; }
+
+/* 站点详情 */
+.site-detail { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 6px; padding: 16px; margin-top: 12px; font-size: 0.88rem; }
+.site-detail b { color: #555; }
+.site-detail code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 0.82rem; }
+
+/* 域名映射表格 */
+.cname-table th { width: auto; }
+.cname-table .domain-input { width: 200px; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 4px; }
+
+/* 工具箱 */
+.tool-card { display: flex; align-items: center; padding: 20px; gap: 16px; border: 1px solid #f0f0f0; border-radius: 8px; margin-bottom: 12px; transition: all 0.2s; }
+.tool-card:hover { border-color: #1890ff; box-shadow: 0 2px 8px rgba(24,144,255,0.1); }
+.tool-icon { font-size: 2rem; width: 48px; text-align: center; }
+.tool-info { flex: 1; }
+.tool-info h4 { font-size: 1rem; margin-bottom: 4px; }
+.tool-info p { font-size: 0.85rem; color: #888; }
+
+/* Badge */
+.badge { display: inline-block; padding: 0 6px; font-size: 0.75rem; background: #ff4d4f; color: #fff; border-radius: 8px; min-width: 16px; text-align: center; }
+
+/* Status */
+.status-ok { color: #52c41a; }
+.status-warn { color: #faad14; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #999; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- 侧边栏 -->
+  <div class="sidebar">
+    <h1>HyperMark</h1>
+    <div class="nav-item active" data-panel="sites">📡 站点</div>
+    <div class="nav-item" data-panel="links">🔗 链接</div>
+    <div class="nav-item" data-panel="categories">📁 分类</div>
+    <div class="nav-item" data-panel="tags">🏷️ 标签</div>
+    <div class="nav-item" data-panel="domains">🌐 域名映射</div>
+    <div class="nav-item" data-panel="tools">🔧 工具箱</div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main">
+
+    <!-- ===== 站点管理 ===== -->
+    <div class="panel active" id="panel-sites">
+      <div class="card">
+        <div class="card-title">新增站点</div>
+        <div class="form-row">
+          <textarea id="siteJson" placeholder='粘贴站点 JSON 定义，如 {"name":"example","title":"示例","homepage":"https://example.com"}'></textarea>
+          <button class="btn btn-primary" onclick="addSite()">添加站点</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">站点列表</div>
+        <div id="siteList"></div>
+      </div>
+    </div>
+
+    <!-- ===== 链接管理 ===== -->
+    <div class="panel" id="panel-links">
+      <div class="card">
+        <div class="form-row" style="margin-bottom:0">
+          <input id="newLinkUrl" type="text" placeholder="输入链接 URL..." style="flex:2" />
+          <input id="newLinkTitle" type="text" placeholder="标题（可选）" style="flex:1" />
+          <select id="newLinkCategory"><option value="">不分类</option></select>
+          <button class="btn btn-primary" onclick="addLink()">添加</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="filter-bar">
+          <input id="linkSearch" type="text" placeholder="搜索链接..." oninput="filterLinks()" />
+          <select id="linkFilterCategory" onchange="filterLinks()"><option value="">全部分类</option></select>
+          <select id="linkFilterSite" onchange="filterLinks()"><option value="">全部站点</option></select>
+          <button class="btn btn-sm btn-warning" onclick="batchParseLinks()">批量 Parse</button>
+          <button class="btn btn-sm btn-default" onclick="refreshLinks()">刷新</button>
+        </div>
+        <div id="linkList"></div>
+      </div>
+    </div>
+
+    <!-- ===== 分类管理 ===== -->
+    <div class="panel" id="panel-categories">
+      <div class="card">
+        <div class="cat-toolbar">
+          <input id="newCatName" type="text" placeholder="新分类名称..." onkeydown="if(event.key==='Enter')addRootCategory()" />
+          <button class="btn btn-primary" onclick="addRootCategory()">添加根分类</button>
+          <button class="btn btn-default" onclick="refreshCategories()">刷新</button>
+        </div>
+        <div id="categoryTree"></div>
+      </div>
+    </div>
+
+    <!-- ===== 标签管理 ===== -->
+    <div class="panel" id="panel-tags">
+      <div class="card">
+        <div class="card-title">新增标签</div>
+        <div class="form-row">
+          <input id="newTagName" type="text" placeholder="标签名称（英文标识）..." />
+          <input id="newTagTitle" type="text" placeholder="标签标题（显示用）..." />
+          <button class="btn btn-primary" onclick="addTag()">添加</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">标签列表</div>
+        <div id="tagList"></div>
+      </div>
+    </div>
+
+    <!-- ===== 域名映射管理 ===== -->
+    <div class="panel" id="panel-domains">
+      <div class="card">
+        <div class="card-title">新增域名映射</div>
+        <div class="form-row">
+          <input id="newCname" type="text" placeholder="真实域名（CNAME）..." />
+          <input id="newDomain" type="text" placeholder="别名域名..." />
+          <button class="btn btn-primary" onclick="addDomainCname()">添加</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">映射列表</div>
+        <div id="domainList"></div>
+      </div>
+    </div>
+
+    <!-- ===== 工具箱 ===== -->
+    <div class="panel" id="panel-tools">
+      <div class="card">
+        <div class="card-title">数据工具</div>
+        <div class="tool-card">
+          <div class="tool-icon">🔄</div>
+          <div class="tool-info">
+            <h4>批量重新解析链接</h4>
+            <p>对所有已收藏的链接重新进行路由解析，更新 Page 信息。适用于站点路由规则变更后重建数据。</p>
+          </div>
+          <button class="btn btn-primary" onclick="batchParseAll()">开始重建</button>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">📋</div>
+          <div class="tool-info">
+            <h4>操作日志回放</h4>
+            <p>从操作日志（.actions 文件）中恢复丢失的链接数据。仅恢复链接添加/删除记录。</p>
+          </div>
+          <button class="btn btn-warning" onclick="replayLinks()">回放日志</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">操作日志</div>
+        <div id="toolLog" style="font-family:monospace;font-size:0.82rem;color:#666;max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 模态框 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- 右键菜单 -->
+<div id="ctxMenu" class="ctx-menu" style="display:none;"></div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ==================== 工具函数 ====================
+function esc(s) {
+  if (s == null) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function toast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+async function api(url, opts = {}) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      ...opts,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  } catch (e) {
+    toast(e.message, 'error');
+    throw e;
+  }
+}
+
+function toolLog(msg) {
+  const el = document.getElementById('toolLog');
+  const time = new Date().toLocaleTimeString('zh-CN');
+  el.innerHTML += `<div>[${time}] ${esc(msg)}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ==================== 模态框 ====================
+function showModal(title, bodyHtml, footerHtml) {
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header"><h3>${esc(title)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">${footerHtml}</div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ==================== Tab 切换 ====================
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+  });
+});
+
+// ==================== 全局缓存 ====================
+let allCategories = [];
+let allTags = [];
+let allSites = [];
+let allLinks = [];
+
+// ==================== 站点管理 ====================
+async function loadSites() {
+  const list = document.getElementById('siteList');
+  try {
+    allSites = await api('/api/sites');
+    if (!allSites.length) { list.innerHTML = '<div class="empty">暂无站点</div>'; return; }
+
+    let html = '<table><thead><tr><th>名称</th><th>标题</th><th>主页</th><th>路由数</th><th>操作</th></tr></thead><tbody>';
+    for (const s of allSites) {
+      html += `<tr>
+        <td><code>${esc(s.name)}</code></td>
+        <td>${esc(s.title || '-')}</td>
+        <td><a href="${esc(s.homepage)}" target="_blank">${esc(s.homepage)}</a></td>
+        <td>${(s.routes || []).length}</td>
+        <td class="actions">
+          <button class="btn btn-sm btn-default" onclick="showSiteDetail('${esc(s.name)}')">详情</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSite('${esc(s.name)}')">删除</button>
+        </td></tr>`;
+    }
+    html += '</tbody></table>';
+    list.innerHTML = html;
+
+    // 更新站点筛选
+    const siteFilter = document.getElementById('linkFilterSite');
+    siteFilter.innerHTML = '<option value="">全部站点</option>' + allSites.map(s => `<option value="${esc(s.name)}">${esc(s.title || s.name)}</option>`).join('');
+  } catch (e) { list.innerHTML = '<div class="empty">加载失败</div>'; }
+}
+
+async function addSite() {
+  const text = document.getElementById('siteJson').value.trim();
+  if (!text) return toast('请输入 JSON 内容', 'error');
+  try {
+    const site = JSON.parse(text);
+    await api('/api/sites', { method: 'POST', body: JSON.stringify(site) });
+    toast('站点添加成功');
+    document.getElementById('siteJson').value = '';
+    loadSites();
+  } catch (e) {
+    toast(e instanceof SyntaxError ? 'JSON 格式错误' : '添加失败', 'error');
+  }
+}
+
+async function deleteSite(name) {
+  if (!confirm('确定删除站点 "' + name + '" 吗？该站点下的链接也会被删除。')) return;
+  try {
+    await api('/admin/sites/' + encodeURIComponent(name), { method: 'DELETE' });
+    toast('删除成功');
+    loadSites();
+  } catch (e) {}
+}
+
+async function showSiteDetail(name) {
+  try {
+    const site = await api('/api/sites/' + encodeURIComponent(name));
+    let html = '<div class="site-detail">';
+    html += `<div><b>Name:</b> ${esc(site.name)}</div>`;
+    html += `<div><b>Title:</b> ${esc(site.title || '-')}</div>`;
+    html += `<div><b>Homepage:</b> <a href="${esc(site.homepage)}" target="_blank">${esc(site.homepage)}</a></div>`;
+    if (site.domains && site.domains.length) html += `<div><b>Domains:</b> ${site.domains.map(esc).join(', ')}</div>`;
+    if (site.routes && site.routes.length) {
+      html += '<div style="margin-top:8px"><b>Routes:</b></div>';
+      for (const r of site.routes) {
+        html += `<div style="padding-left:12px;margin-top:4px">• <b>${esc(r.name || r.title || '')}</b> <code>${esc(r.pattern)}</code>`;
+        if (r.stdFormat) html += ` → <code>${esc(r.stdFormat)}</code>`;
+        if (r.tags && r.tags.length) html += ' ' + r.tags.map(t => `<span class="tag tag-blue">${esc(t)}</span>`).join('');
+        html += '</div>';
+      }
+    }
+    if (site.vars && Object.keys(site.vars).length) {
+      html += '<div style="margin-top:8px"><b>Vars:</b></div>';
+      for (const [k, v] of Object.entries(site.vars)) html += `<div style="padding-left:12px">${esc(k)}: ${esc(v)}</div>`;
+    }
+    html += '</div>';
+
+    showModal('站点详情: ' + (site.title || site.name), html, '<button class="btn btn-default" onclick="closeModal()">关闭</button>');
+  } catch (e) {}
+}
+
+// ==================== 分类管理 ====================
+async function loadCategories() {
+  try {
+    allCategories = await api('/api/categories');
+    renderCategorySelects();
+    renderCategoryTree();
+  } catch (e) {}
+}
+
+function refreshCategories() { loadCategories(); toast('已刷新', 'info'); }
+
+function renderCategorySelects() {
+  const opts = '<option value="">不分类</option>' + allCategories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+  document.getElementById('newLinkCategory').innerHTML = opts;
+  document.getElementById('linkFilterCategory').innerHTML = '<option value="">全部分类</option>' + allCategories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+}
+
+function buildTree(cats) {
+  const map = {};
+  const roots = [];
+  cats.forEach(c => { map[c.name] = { ...c, children: [] }; });
+  cats.forEach(c => {
+    if (c.parentId && map[c.parentId]) {
+      map[c.parentId].children.push(map[c.name]);
+    } else {
+      roots.push(map[c.name]);
+    }
+  });
+  return roots;
+}
+
+function renderCategoryTree() {
+  const container = document.getElementById('categoryTree');
+  const tree = buildTree(allCategories);
+
+  let html = '<ul class="cat-tree">';
+  html += `<li>
+    <div class="cat-item root-node" data-cat-name="__root__" draggable="false">
+      <span style="margin-right:8px">🏠</span>
+      <span class="cat-name">根目录</span>
+      <span class="cat-count">${allCategories.length} 个分类</span>
+    </div>`;
+  if (tree.length) {
+    html += '<ul class="cat-tree">' + tree.map(c => renderCatNode(c)).join('') + '</ul>';
+  }
+  html += '</li></ul>';
+  container.innerHTML = html;
+
+  container.querySelectorAll('.cat-item').forEach(el => {
+    const isRoot = el.dataset.catName === '__root__';
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('dragover', onDragOver);
+    el.addEventListener('dragleave', onDragLeave);
+    el.addEventListener('dragend', onDragEnd);
+    el.addEventListener('drop', onDrop);
+    if (!isRoot) {
+      el.addEventListener('contextmenu', onCatContextMenu);
+    } else {
+      el.addEventListener('contextmenu', onRootContextMenu);
+    }
+  });
+}
+
+function renderCatNode(node) {
+  const linkCount = allLinks.filter(l => l.category === node.name).length;
+  let html = `<li>
+    <div class="cat-item" data-cat-name="${esc(node.name)}" draggable="true">
+      <span style="margin-right:8px">📁</span>
+      <span class="cat-name">${esc(node.name)}</span>
+      <span class="cat-count">${linkCount}</span>
+      <span class="cat-actions">
+        <button class="btn btn-icon btn-sm btn-default" onclick="event.stopPropagation();addChildCategory('${esc(node.name)}')" title="添加子分类">➕</button>
+        <button class="btn btn-icon btn-sm btn-default" onclick="event.stopPropagation();renameCategory('${esc(node.name)}')" title="重命名">✏️</button>
+        <button class="btn btn-icon btn-sm btn-danger" onclick="event.stopPropagation();deleteCat('${esc(node.name)}')" title="删除">🗑️</button>
+      </span>
+    </div>`;
+  if (node.children.length) {
+    html += '<ul class="cat-tree">' + node.children.map(c => renderCatNode(c)).join('') + '</ul>';
+  }
+  html += '</li>';
+  return html;
+}
+
+async function addRootCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) return toast('请输入分类名称', 'error');
+  try {
+    await api('/api/categories', { method: 'POST', body: JSON.stringify({ name, parentName: null }) });
+    toast('分类添加成功');
+    document.getElementById('newCatName').value = '';
+    loadCategories();
+  } catch (e) {}
+}
+
+async function addChildCategory(parentName) {
+  const name = prompt('请输入子分类名称：');
+  if (!name || !name.trim()) return;
+  try {
+    await api('/api/categories', { method: 'POST', body: JSON.stringify({ name: name.trim(), parentName }) });
+    toast('分类添加成功');
+    loadCategories();
+  } catch (e) {}
+}
+
+async function deleteCat(name, force = false) {
+  if (!force && !confirm('确定删除分类 "' + name + '" 吗？')) return;
+  try {
+    await api('/admin/categories/' + encodeURIComponent(name) + '?force=' + force, { method: 'DELETE' });
+    toast('删除成功');
+    loadCategories();
+  } catch (e) {
+    if (!force && e.message && (e.message.includes('子分类') || e.message.includes('收藏链接'))) {
+      if (confirm(e.message + '，是否强制删除？')) {
+        await deleteCat(name, true);
+      }
+    }
+  }
+}
+
+// 拖拽
+let dragCatName = null;
+
+function onDragStart(e) {
+  dragCatName = e.currentTarget.dataset.catName;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragOver(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  if (target.dataset.catName !== dragCatName) target.classList.add('drag-over');
+}
+function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('drag-over'));
+  dragCatName = null;
+}
+async function onDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const targetName = e.currentTarget.dataset.catName;
+  if (dragCatName == null || dragCatName === targetName) return;
+  const newParent = targetName === '__root__' ? null : targetName;
+  if (newParent !== null && isDescendant(newParent, dragCatName)) return toast('不能拖到子分类下', 'error');
+  try {
+    await api('/api/categories/' + encodeURIComponent(dragCatName) + '/move', { method: 'PATCH', body: JSON.stringify({ newParentName: newParent }) });
+    toast(newParent === null ? '已移为一级分类' : '移动成功');
+    loadCategories();
+  } catch (e) {}
+}
+
+function isDescendant(targetName, dragName) {
+  const children = {};
+  allCategories.forEach(c => { if (c.parentId) (children[c.parentId] ||= []).push(c.name); });
+  function dfs(n) { const k = children[n]; if (!k) return false; if (k.includes(targetName)) return true; return k.some(x => dfs(x)); }
+  return dfs(dragName);
+}
+
+// 右键菜单
+let ctxMenuTarget = null;
+function onCatContextMenu(e) {
+  e.preventDefault(); e.stopPropagation();
+  ctxMenuTarget = e.currentTarget.dataset.catName;
+  showContextMenu(e.clientX, e.clientY);
+}
+function onRootContextMenu(e) {
+  e.preventDefault(); e.stopPropagation();
+  showRootContextMenu(e.clientX, e.clientY);
+}
+function showContextMenu(x, y) {
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `
+    <div class="ctx-menu-item" onclick="addChildCategory('${esc(ctxMenuTarget)}');hideCtx()">➕ 添加子分类</div>
+    <div class="ctx-menu-item" onclick="renameCategory('${esc(ctxMenuTarget)}');hideCtx()">✏️ 重命名</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-menu-item danger" onclick="deleteCat('${esc(ctxMenuTarget)}');hideCtx()">🗑️ 删除</div>`;
+  menu.style.display = 'block'; positionCtx(menu, x, y);
+}
+function showRootContextMenu(x, y) {
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `<div class="ctx-menu-item" onclick="addRootCategory();hideCtx()">➕ 添加根分类</div>`;
+  menu.style.display = 'block'; positionCtx(menu, x, y);
+}
+function positionCtx(menu, x, y) {
+  const r = menu.getBoundingClientRect();
+  menu.style.left = Math.min(x, window.innerWidth - r.width - 4) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - r.height - 4) + 'px';
+}
+function hideCtx() { document.getElementById('ctxMenu').style.display = 'none'; }
+document.addEventListener('click', hideCtx);
+
+async function renameCategory(oldName) {
+  const name = prompt('重命名分类：', oldName);
+  if (!name || !name.trim() || name.trim() === oldName) return;
+  try {
+    await api('/api/categories/' + encodeURIComponent(oldName), { method: 'PUT', body: JSON.stringify({ newName: name.trim() }) });
+    toast('重命名成功');
+    loadCategories();
+  } catch (e) {}
+}
+
+// ==================== 标签管理 ====================
+async function loadTags() {
+  try {
+    allTags = await api('/api/tags');
+    renderTagList();
+  } catch (e) {}
+}
+
+function renderTagList() {
+  const container = document.getElementById('tagList');
+  if (!allTags.length) { container.innerHTML = '<div class="empty">暂无标签</div>'; return; }
+  let html = '<table><thead><tr><th>ID</th><th>名称</th><th>标题</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
+  for (const t of allTags) {
+    const time = t.createdAt ? new Date(t.createdAt).toLocaleString('zh-CN') : '-';
+    const tagClass = getTagColorClass(t.name);
+    html += `<tr>
+      <td>${t.id}</td>
+      <td><span class="tag ${tagClass}">${esc(t.name)}</span></td>
+      <td>${esc(t.title || '-')}</td>
+      <td>${time}</td>
+      <td class="actions">
+        <button class="btn btn-sm btn-default" onclick="editTag(${t.id})">编辑</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteTag(${t.id})">删除</button>
+      </td></tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function getTagColorClass(name) {
+  if (name.startsWith('system:')) return 'tag-gray';
+  const colors = ['tag-blue', 'tag-green', 'tag-orange', 'tag-purple', 'tag-red'];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return colors[Math.abs(h) % colors.length];
+}
+
+async function addTag() {
+  const name = document.getElementById('newTagName').value.trim();
+  const title = document.getElementById('newTagTitle').value.trim();
+  if (!name) return toast('请输入标签名称', 'error');
+  try {
+    await api('/api/tags', { method: 'POST', body: JSON.stringify({ name, title: title || name }) });
+    toast('标签添加成功');
+    document.getElementById('newTagName').value = '';
+    document.getElementById('newTagTitle').value = '';
+    loadTags();
+  } catch (e) {}
+}
+
+async function editTag(id) {
+  const tag = allTags.find(t => t.id === id);
+  if (!tag) return;
+  showModal('编辑标签', `
+    <div class="form-group"><label>名称</label><input id="editTagName" value="${esc(tag.name)}" style="width:100%" /></div>
+    <div class="form-group"><label>标题</label><input id="editTagTitle" value="${esc(tag.title || '')}" style="width:100%" /></div>`,
+    `<button class="btn btn-default" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary" onclick="saveTag(${id})">保存</button>`);
+}
+
+async function saveTag(id) {
+  const name = document.getElementById('editTagName').value.trim();
+  const title = document.getElementById('editTagTitle').value.trim();
+  if (!name) return toast('名称不能为空', 'error');
+  try {
+    await api('/api/tags/' + id, { method: 'PUT', body: JSON.stringify({ name, title }) });
+    toast('保存成功');
+    closeModal();
+    loadTags();
+  } catch (e) {}
+}
+
+async function deleteTag(id) {
+  if (!confirm('确定删除该标签吗？所有链接上的该标签也会被移除。')) return;
+  try {
+    await api('/admin/tags/' + id, { method: 'DELETE' });
+    toast('删除成功');
+    loadTags();
+    loadLinks(); // 刷新链接显示
+  } catch (e) {}
+}
+
+// ==================== 域名映射管理 ====================
+async function loadDomainCnames() {
+  try {
+    const mappings = await api('/api/domain-cnames');
+    renderDomainList(mappings);
+  } catch (e) {}
+}
+
+function renderDomainList(mappings) {
+  const container = document.getElementById('domainList');
+  if (!mappings.length) { container.innerHTML = '<div class="empty">暂无域名映射</div>'; return; }
+  let html = '<table class="cname-table"><thead><tr><th>真实域名 (CNAME)</th><th>别名域名</th><th>操作</th></tr></thead><tbody>';
+  // Group by cname
+  const groups = {};
+  for (const m of mappings) {
+    (groups[m.cname] ||= []).push(m.domain);
+  }
+  for (const [cname, domains] of Object.entries(groups)) {
+    html += `<tr>
+      <td><code>${esc(cname)}</code></td>
+      <td>${domains.map(d => `<code>${esc(d)}</code>`).join(', ')}</td>
+      <td class="actions">
+        <button class="btn btn-sm btn-danger" onclick="deleteDomainCname('${esc(cname)}')">删除映射</button>
+      </td></tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+async function addDomainCname() {
+  const cname = document.getElementById('newCname').value.trim();
+  const domain = document.getElementById('newDomain').value.trim();
+  if (!cname || !domain) return toast('请填写完整信息', 'error');
+  try {
+    await api('/api/domain-cnames', { method: 'POST', body: JSON.stringify({ domain, cname }) });
+    toast('域名映射添加成功');
+    document.getElementById('newCname').value = '';
+    document.getElementById('newDomain').value = '';
+    loadDomainCnames();
+  } catch (e) {}
+}
+
+async function deleteDomainCname(domain) {
+  if (!confirm('确定删除别名域名 "' + domain + '" 的映射吗？')) return;
+  try {
+    await api('/api/domain-cnames/' + encodeURIComponent(domain), { method: 'DELETE' });
+    toast('删除成功');
+    loadDomainCnames();
+  } catch (e) {}
+}
+
+// ==================== 链接管理 ====================
+async function loadLinks() {
+  try {
+    const result = await api('/api/links?limit=200&offset=0');
+    allLinks = result.data || [];
+    renderLinkList(allLinks);
+  } catch (e) {}
+}
+
+function refreshLinks() { loadLinks(); loadCategories(); toast('已刷新', 'info'); }
+
+function filterLinks() {
+  const search = document.getElementById('linkSearch').value.trim().toLowerCase();
+  const cat = document.getElementById('linkFilterCategory').value;
+  const site = document.getElementById('linkFilterSite').value;
+
+  let filtered = allLinks;
+  if (search) {
+    filtered = filtered.filter(l =>
+      l.url.toLowerCase().includes(search) ||
+      (l.title && l.title.toLowerCase().includes(search)) ||
+      (l.category && l.category.toLowerCase().includes(search))
+    );
+  }
+  if (cat) filtered = filtered.filter(l => l.category === cat);
+  if (site) filtered = filtered.filter(l => l.page && l.page.site === site);
+
+  renderLinkList(filtered);
+}
+
+function renderLinkList(links) {
+  const container = document.getElementById('linkList');
+  if (!links.length) { container.innerHTML = '<div class="empty">暂无链接</div>'; return; }
+
+  let html = '<table><thead><tr>';
+  html += '<th style="width:30px"><input type="checkbox" onchange="toggleAllLinks(this.checked)" /></th>';
+  html += '<th>标题</th><th>链接</th><th>分类</th><th>站点</th><th>标签</th><th>时间</th><th>操作</th>';
+  html += '</tr></thead><tbody>';
+  for (const l of links) {
+    const time = l.createdAt ? new Date(l.createdAt).toLocaleString('zh-CN') : '-';
+    const tags = (l.tags || []).map(t => {
+      const cls = getTagColorClass(t);
+      return `<span class="tag ${cls}">${esc(t)}</span>`;
+    }).join('');
+    const siteName = (l.page && l.page.site && l.page.site !== 'other') ? l.page.site : '-';
+    html += `<tr>
+      <td><input type="checkbox" class="link-check" value="${esc(l.url)}" /></td>
+      <td>${esc(l.title || l.name || '-')}</td>
+      <td class="url-cell"><a href="${esc(l.url)}" target="_blank" title="${esc(l.url)}">${esc(l.url)}</a></td>
+      <td>${esc(l.category || '-')}</td>
+      <td>${esc(siteName)}</td>
+      <td>${tags || '-'}</td>
+      <td style="font-size:0.82rem;color:#888">${time}</td>
+      <td class="actions">
+        <button class="btn btn-icon btn-sm btn-default" onclick="editLinkTags('${esc(l.url)}')" title="管理标签">🏷️</button>
+        <button class="btn btn-icon btn-sm btn-default" onclick="moveLink('${esc(l.url)}')" title="移动分类">📂</button>
+        <button class="btn btn-icon btn-sm btn-default" onclick="parseSingleLink('${esc(l.url)}')" title="解析">🔄</button>
+        <button class="btn btn-icon btn-sm btn-danger" onclick="deleteLink('${esc(l.url)}')" title="删除">✕</button>
+      </td></tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function toggleAllLinks(checked) {
+  document.querySelectorAll('.link-check').forEach(cb => cb.checked = checked);
+}
+
+function getSelectedLinks() {
+  return Array.from(document.querySelectorAll('.link-check:checked')).map(cb => cb.value);
+}
+
+async function addLink() {
+  const url = document.getElementById('newLinkUrl').value.trim();
+  const title = document.getElementById('newLinkTitle').value.trim();
+  const category = document.getElementById('newLinkCategory').value;
+  if (!url) return toast('请输入链接', 'error');
+  try {
+    const body = { url };
+    if (title) body.title = title;
+    if (category) body.category = category;
+    await api('/api/links', { method: 'POST', body: JSON.stringify(body) });
+    toast('添加成功（后台解析中）');
+    document.getElementById('newLinkUrl').value = '';
+    document.getElementById('newLinkTitle').value = '';
+    loadLinks();
+  } catch (e) {}
+}
+
+async function deleteLink(url) {
+  if (!confirm('确定删除该链接吗？')) return;
+  try {
+    await api('/api/links/' + encodeURIComponent(url), { method: 'DELETE' });
+    toast('删除成功');
+    loadLinks();
+  } catch (e) {}
+}
+
+async function moveLink(url) {
+  const link = allLinks.find(l => l.url === url);
+  if (!link) return;
+  const catOpts = allCategories.map(c =>
+    `<option value="${esc(c.name)}" ${c.name === link.category ? 'selected' : ''}>${esc(c.name)}</option>`
+  ).join('');
+  showModal('移动链接', `
+    <div style="margin-bottom:12px;padding:8px;background:#fafafa;border-radius:4px;font-size:0.85rem;word-break:break-all">${esc(url)}</div>
+    <div class="form-group"><label>目标分类</label>
+      <select id="moveLinkCat" style="width:100%;padding:8px"><option value="">不分类</option>${catOpts}</select></div>`,
+    `<button class="btn btn-default" onclick="closeModal()">取消</button>
+     <button class="btn btn-primary" onclick="doMoveLink('${esc(url)}')">移动</button>`);
+}
+
+async function doMoveLink(url) {
+  const cat = document.getElementById('moveLinkCat').value;
+  try {
+    await api('/api/links/' + encodeURIComponent(url), {
+      method: 'PUT',
+      body: JSON.stringify({ category: cat || null })
+    });
+    toast('移动成功');
+    closeModal();
+    loadLinks();
+  } catch (e) {}
+}
+
+// 链接标签管理
+async function editLinkTags(url) {
+  const link = allLinks.find(l => l.url === url);
+  if (!link) return;
+  const currentTags = link.tags || [];
+  const currentSet = new Set(currentTags);
+
+  let bodyHtml = `<div style="margin-bottom:8px;font-size:0.85rem;color:#666;word-break:break-all">${esc(url)}</div>`;
+  bodyHtml += '<div class="form-group"><label>已有标签（点击移除）</label><div class="tag-list" id="currentTags">';
+  if (currentTags.length) {
+    for (const t of currentTags) {
+      const cls = getTagColorClass(t);
+      bodyHtml += `<span class="tag-item ${cls}">${esc(t)} <span class="tag-remove" onclick="removeLinkTag('${esc(url)}','${esc(t)}')">&times;</span></span>`;
+    }
+  } else {
+    bodyHtml += '<span style="color:#999;font-size:0.85rem">暂无标签</span>';
+  }
+  bodyHtml += '</div></div>';
+  bodyHtml += '<div class="form-group"><label>添加标签</label><div class="tag-select" id="tagSelect">';
+  for (const t of allTags) {
+    const selected = currentSet.has(t.name) ? 'selected' : '';
+    bodyHtml += `<span class="tag-option ${selected}" data-tag-id="${t.id}" data-tag-name="${esc(t.name)}" onclick="toggleTagOption(this)">${esc(t.title || t.name)}</span>`;
+  }
+  bodyHtml += '</div></div>';
+  bodyHtml += '<div class="form-group"><label>或输入新标签名称</label><input id="newLinkTag" style="width:100%" placeholder="输入新标签名称后点击添加" /></div>';
+
+  showModal('管理标签', bodyHtml, `
+    <button class="btn btn-default" onclick="closeModal()">取消</button>
+    <button class="btn btn-default" onclick="addNewLinkTag('${esc(url)}')">添加新标签</button>
+    <button class="btn btn-primary" onclick="saveLinkTags('${esc(url)}')">保存选择</button>`);
+}
+
+function toggleTagOption(el) {
+  el.classList.toggle('selected');
+}
+
+async function saveLinkTags(url) {
+  const selected = Array.from(document.querySelectorAll('#tagSelect .tag-option.selected')).map(el => ({
+    id: parseInt(el.dataset.tagId),
+    name: el.dataset.tagName
+  }));
+  const tagIds = selected.map(s => s.id);
+
+  // 先获取当前标签，计算需要添加和移除的
+  const link = allLinks.find(l => l.url === url);
+  const currentTags = (link && link.tags) ? link.tags : [];
+  const newTagNames = new Set(selected.map(s => s.name));
+  const currentTagNames = new Set(currentTags);
+
+  // 需要添加的
+  const toAdd = selected.filter(s => !currentTagNames.has(s.name));
+  // 需要移除的
+  const toRemove = currentTags.filter(t => !newTagNames.has(t));
+
+  if (toAdd.length > 0) {
+    await api('/api/links/' + encodeURIComponent(url) + '/tags', {
+      method: 'POST',
+      body: JSON.stringify({ tagIds: toAdd.map(s => s.id) })
+    });
+  }
+  for (const t of toRemove) {
+    const tag = allTags.find(tt => tt.name === t);
+    if (tag) {
+      await api('/api/links/' + encodeURIComponent(url) + '/tags/' + tag.id, { method: 'DELETE' });
+    }
+  }
+
+  toast('标签保存成功');
+  closeModal();
+  loadLinks();
+}
+
+async function removeLinkTag(url, tagName) {
+  const tag = allTags.find(t => t.name === tagName);
+  if (!tag) return;
+  try {
+    await api('/api/links/' + encodeURIComponent(url) + '/tags/' + tag.id, { method: 'DELETE' });
+    toast('已移除标签');
+    // 局部刷新
+    const link = allLinks.find(l => l.url === url);
+    if (link) {
+      link.tags = (link.tags || []).filter(t => t !== tagName);
+    }
+    editLinkTags(url); // 重新打开弹窗
+  } catch (e) {}
+}
+
+async function addNewLinkTag(url) {
+  const name = document.getElementById('newLinkTag').value.trim();
+  if (!name) return toast('请输入标签名称', 'error');
+  try {
+    await api('/api/tags', { method: 'POST', body: JSON.stringify({ name, title: name }) });
+    toast('标签创建成功');
+    // 找到新创建的标签
+    await loadTags();
+    const newTag = allTags.find(t => t.name === name);
+    if (newTag) {
+      await api('/api/links/' + encodeURIComponent(url) + '/tags', {
+        method: 'POST',
+        body: JSON.stringify({ tagIds: [newTag.id] })
+      });
+    }
+    document.getElementById('newLinkTag').value = '';
+    loadLinks();
+    editLinkTags(url);
+  } catch (e) {}
+}
+
+async function parseSingleLink(url) {
+  try {
+    await api('/api/parse/batch', { method: 'POST', body: JSON.stringify({ urls: [url] }) });
+    toast('解析成功');
+    loadLinks();
+  } catch (e) {
+    toast('解析请求失败，请检查服务是否运行', 'error');
+  }
+}
+
+async function batchParseLinks() {
+  const selected = getSelectedLinks();
+  if (selected.length === 0 && !confirm('未选中任何链接，将批量解析全部链接，是否继续？')) return;
+  toolLog('开始批量解析链接...');
+  try {
+    const body = selected.length > 0 ? { urls: selected } : {};
+    const result = await api('/api/parse/batch', { method: 'POST', body: JSON.stringify(body) });
+    toolLog(`解析完成：共 ${result.total} 条，成功 ${result.success} 条，失败 ${result.fail} 条`);
+    toast(`解析完成：成功 ${result.success}，失败 ${result.fail}`);
+    loadLinks();
+  } catch (e) {}
+}
+
+async function batchParseAll() {
+  if (!confirm('确定对所有链接进行重新解析吗？这可能需要一些时间。')) return;
+  toolLog('开始重新解析全部链接...');
+  try {
+    const result = await api('/api/parse/batch', { method: 'POST' });
+    toolLog(`解析完成：共 ${result.total} 条，成功 ${result.success} 条，失败 ${result.fail} 条`);
+    toast(`解析完成：成功 ${result.success}，失败 ${result.fail}`);
+    loadLinks();
+  } catch (e) {}
+}
+
+// ==================== 工具箱 ====================
+async function replayLinks() {
+  if (!confirm('确定从操作日志回放链接数据吗？')) return;
+  toolLog('开始回放操作日志...');
+  try {
+    const result = await api('/admin/replay/links', { method: 'POST' });
+    toolLog(result.message || '回放完成');
+    toast(result.message || '回放完成');
+    loadLinks();
+  } catch (e) {}
+}
+
+// ==================== 初始化 ====================
+async function init() {
+  await Promise.all([
+    loadSites(),
+    loadCategories(),
+    loadTags(),
+    loadLinks(),
+    loadDomainCnames(),
+  ]);
+}
+
+init();
+</script>
+</body>
+</html>

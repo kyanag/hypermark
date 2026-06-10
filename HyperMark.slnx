@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="HyperMark\HyperMark.csproj" />
+  <Project Path="HyperMark.Web\HyperMark.Web.csproj" />
+  <Project Path="HyperMark.Desktop\HyperMark.Desktop.csproj" />
+  <Project Path="HyperMark.Tests\HyperMark.Tests.csproj" />
+</Solution>
