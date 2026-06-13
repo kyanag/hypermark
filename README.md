@@ -17,23 +17,23 @@
 
 - .NET 10.0（LTS）
 - ASP.NET Core Minimal API
+- Avalonia UI 11.x（桌面端，支持 AOT 编译）
 - 文件系统存储（无数据库依赖）
-- WinForms 系统托盘（桌面模式）
 
 ## 项目结构
 
 ```
 HyperMark.slnx
-├── HyperMark/                  # 核心库
+├── HyperMark/                  # 核心库（net10.0 类库）
 │   ├── Models/                 # 数据模型（Site, Link, Page, Route, Category, Tag）
 │   ├── Matching/               # 路由匹配引擎
 │   ├── Parsers/                # URL 解析器
 │   └── Storage/                # 存储层（LocalStorage → CacheStorage → ActionLogger → Repository）
-├── HyperMark.Web/              # Web 服务
+├── HyperMark.Web/              # Web 服务（net10.0，由 Desktop 承载）
 │   ├── Api/                    # API 端点定义
 │   └── wwwroot/                # 前端管理面板
-├── HyperMark.Desktop/          # Windows 桌面应用
-└── HyperMark.Tests/            # 单元测试
+├── HyperMark.Desktop/          # Windows 桌面应用（net10.0-windows, Avalonia UI）
+└── HyperMark.Tests/            # 单元测试（xunit）
 ```
 
 ## 数据目录
@@ -75,7 +75,7 @@ dotnet run --project HyperMark.Web
 dotnet run --project HyperMark.Desktop
 ```
 
-启动后出现在系统托盘，右键菜单可：暂停/启动服务、打开 Web 界面、打开数据目录、设置开机自启。
+启动后出现在系统托盘，右键菜单可：暂停/启动服务、打开 Web 界面、打开数据目录、设置开机自启。基于 Avalonia UI 构建，支持 AOT 编译。
 
 ### 自定义配置
 
@@ -96,10 +96,14 @@ dotnet run --project HyperMark.Desktop
 # 或手动发布
 dotnet publish HyperMark.Desktop/HyperMark.Desktop.csproj -c Release -o ./publish/dependent
 dotnet publish HyperMark.Desktop/HyperMark.Desktop.csproj -c Release --self-contained true -o ./publish/self-contained
+
+# AOT 编译（需在 csproj 中设置 PublishAot=true）
+dotnet publish HyperMark.Desktop/HyperMark.Desktop.csproj -c Release -r win-x64 -o ./publish/aot
 ```
 
 - **框架依赖版本**：体积小，需用户安装 .NET 运行时
 - **Self-Contained 版本**：体积大，无需额外安装
+- **AOT 版本**：原生编译，启动最快，体积适中
 
 ## API 参考
 

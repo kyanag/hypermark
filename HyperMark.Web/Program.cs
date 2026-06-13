@@ -16,12 +16,14 @@ namespace HyperMark.Web;
 
 public class WebHost
 {
-    public static WebApplication CreateApp(string[] args)
+    public static WebApplication CreateApp(string[] args, string? httpUrl = null)
     {
         AppConfig.EnsureInitialized();
 
         var config = AppConfig.Instance;
-        Environment.SetEnvironmentVariable("ASPNETCORE_URLS", config.Http);
+        httpUrl ??= config.Http;
+
+        Environment.SetEnvironmentVariable("ASPNETCORE_URLS", httpUrl);
 
         var storage = new CacheStorage(new LocalStorage());
         var actionLogger = new ActionLogger(storage);
@@ -31,10 +33,11 @@ public class WebHost
         var baseDir = AppContext.BaseDirectory;
         var webRootPath = Path.Combine(baseDir, "wwwroot");
 
-        var builder = WebApplication.CreateBuilder(args);
-
-        // 设置 WebRootPath 为 HyperMark.Web 项目的 wwwroot 目录
-        builder.WebHost.UseWebRoot(webRootPath);
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            Args = args,
+            WebRootPath = webRootPath
+        });
 
 #if DEBUG
         builder.Services.AddEndpointsApiExplorer();
@@ -73,6 +76,20 @@ public class WebHost
         builder.Services.AddHostedService(sp => sp.GetRequiredService<BackgroundLinkProcessor>());
 
         var app = builder.Build();
+
+        // 全局异常处理中间件
+        app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next();
+            }
+            catch (Exception ex)
+            {
+                fileLogger.LogError($"未处理的请求异常: {context.Request.Method} {context.Request.Path}", ex);
+                throw; // 重新抛出让 ASP.NET Core 处理
+            }
+        });
 
         // 访问日志中间件
         app.Use(async (context, next) =>

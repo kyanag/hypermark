@@ -20,11 +20,11 @@ public class UnitTest1
             var query_url = "https://www.sehuatang.net/forum.php?mod=forumdisplay&fid=2&filter=lastpost&orderby=lastpost";
 
             var args = RouteMatcher.Match(query_route, query_url);
-            var std_url = RouteMatcher.BuildStdUrl(query_route, args);
+            var std_url = args != null ? RouteMatcher.BuildStdUrl(query_route, args) : null;
 
             var path_url = "https://www.sehuatang.net/forum-2-1.html";
             var args2 = RouteMatcher.Match(path_route, path_url);
-            var std_url2 = RouteMatcher.BuildStdUrl(path_route, args2);
+            var std_url2 = args2 != null ? RouteMatcher.BuildStdUrl(path_route, args2) : null;
         }
     }
 }

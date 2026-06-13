@@ -56,7 +56,7 @@ public class AppConfig
         if (!File.Exists(configPath))
         {
             var defaultConfig = new AppConfig();
-            var json = JsonSerializer.Serialize(defaultConfig, HyperMarkJsonContext.Default.Options);
+            var json = JsonSerializer.Serialize(defaultConfig, HyperMarkJsonContext.Default.AppConfig);
             File.WriteAllText(configPath, json + Environment.NewLine);
         }
     }

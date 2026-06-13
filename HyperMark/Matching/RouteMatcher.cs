@@ -19,7 +19,7 @@ public static class RouteMatcher
     {
         // 解析 URL 获取路径和 query
         string path;
-        string rawQueryString = null;
+        string? rawQueryString = null;
         Dictionary<string, string> queryParams;
         try
         {
@@ -36,7 +36,7 @@ public static class RouteMatcher
                 var parts = url.Split('?', 2);
                 path = parts[0].Split('#')[0];
                 rawQueryString = parts.Length > 1 ? "?" + parts[1] : null;
-                queryParams = parts.Length > 1 ? ParseQueryString(rawQueryString) : new Dictionary<string, string>();
+                queryParams = rawQueryString != null ? ParseQueryString(rawQueryString) : new Dictionary<string, string>();
             }
         }
         catch
@@ -48,7 +48,7 @@ public static class RouteMatcher
         // 解析 pattern，分离 path 和 query 部分
         var patternParts = route.Pattern.Split('?', 2);
         var patternPath = patternParts[0];
-        string patternQuery = patternParts.Length > 1 ? patternParts[1] : null;
+        string? patternQuery = patternParts.Length > 1 ? patternParts[1] : null;
 
         // 判断解析模式
         var mode = route.QueryMode ?? InferQueryMode(patternQuery);
@@ -176,7 +176,7 @@ public static class RouteMatcher
     /// <summary>
     /// 推断查询参数解析模式
     /// </summary>
-    private static QueryParseMode InferQueryMode(string patternQuery)
+    private static QueryParseMode InferQueryMode(string? patternQuery)
     {
         if (string.IsNullOrEmpty(patternQuery))
         {
@@ -193,7 +193,7 @@ public static class RouteMatcher
     /// <summary>
     /// PathStyle 模式匹配：把整个 URL（含 ? 后部分）当作路径匹配
     /// </summary>
-    private static Dictionary<string, object>? MatchPathStyle(Route route, string originalUrl, string path, string rawQueryString)
+    private static Dictionary<string, object>? MatchPathStyle(Route route, string originalUrl, string path, string? rawQueryString)
     {
         // 构建完整路径：path + ? + query部分
         var fullPath = path;

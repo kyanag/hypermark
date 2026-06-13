@@ -82,7 +82,7 @@ public static class StartupManager
                 config.AutoStart = autoStart;
                 var newJson = System.Text.Json.JsonSerializer.Serialize(
                     config,
-                    HyperMark.HyperMarkJsonContext.Default.Options
+                    HyperMark.HyperMarkJsonContext.Instance.AppConfig
                 );
                 File.WriteAllText(configPath, newJson + Environment.NewLine);
             }

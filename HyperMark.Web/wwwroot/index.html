@@ -244,11 +244,11 @@ td.actions .btn { margin-right: 4px; }
       </div>
       <div class="card">
         <div class="filter-bar">
-          <input id="linkSearch" type="text" placeholder="搜索链接..." oninput="filterLinks()" />
+          <button class="btn btn-warning" onclick="batchParseLinks()">批量 Parse</button>
+          <input id="linkSearch" type="text" placeholder="搜索链接..." onkeydown="if(event.key==='Enter')searchLinks()" />
           <select id="linkFilterCategory" onchange="filterLinks()"><option value="">全部分类</option></select>
           <select id="linkFilterSite" onchange="filterLinks()"><option value="">全部站点</option></select>
-          <button class="btn btn-sm btn-warning" onclick="batchParseLinks()">批量 Parse</button>
-          <button class="btn btn-sm btn-default" onclick="refreshLinks()">刷新</button>
+          <button class="btn btn-primary" onclick="searchLinks()">搜索</button>
         </div>
         <div id="linkList"></div>
       </div>
@@ -826,9 +826,10 @@ async function deleteDomainCname(domain) {
 }
 
 // ==================== 链接管理 ====================
-async function loadLinks() {
+async function loadLinks(params = {}) {
   try {
-    const result = await api('/api/links?limit=200&offset=0');
+    const qs = new URLSearchParams({ limit: '200', offset: '0', ...Object.fromEntries(Object.entries(params).filter(([_, v]) => v)) });
+    const result = await api(`/api/links?${qs}`);
     allLinks = result.data || [];
     renderLinkList(allLinks);
   } catch (e) {}
@@ -837,22 +838,27 @@ async function loadLinks() {
 function refreshLinks() { loadLinks(); loadCategories(); toast('已刷新', 'info'); }
 
 function filterLinks() {
+  const cat = document.getElementById('linkFilterCategory').value;
+  const site = document.getElementById('linkFilterSite').value;
+  // 服务端筛选分类和站点
+  loadLinks({ category: cat, site: site });
+}
+
+function searchLinks() {
   const search = document.getElementById('linkSearch').value.trim().toLowerCase();
   const cat = document.getElementById('linkFilterCategory').value;
   const site = document.getElementById('linkFilterSite').value;
-
-  let filtered = allLinks;
-  if (search) {
-    filtered = filtered.filter(l =>
-      l.url.toLowerCase().includes(search) ||
-      (l.title && l.title.toLowerCase().includes(search)) ||
-      (l.category && l.category.toLowerCase().includes(search))
-    );
-  }
-  if (cat) filtered = filtered.filter(l => l.category === cat);
-  if (site) filtered = filtered.filter(l => l.page && l.page.site === site);
-
-  renderLinkList(filtered);
+  // 服务端筛选分类和站点，客户端过滤搜索词
+  loadLinks({ category: cat, site: site }).then(() => {
+    if (search) {
+      const filtered = allLinks.filter(l =>
+        l.url.toLowerCase().includes(search) ||
+        (l.title && l.title.toLowerCase().includes(search)) ||
+        (l.category && l.category.toLowerCase().includes(search))
+      );
+      renderLinkList(filtered);
+    }
+  });
 }
 
 function renderLinkList(links) {

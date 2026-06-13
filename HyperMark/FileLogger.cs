@@ -31,14 +31,27 @@ public class FileLogger
 
     /// <summary>
     /// 记录错误日志
-    /// 格式: [时间] 错误信息
+    /// 格式: [时间] [级别] 错误信息 + 堆栈跟踪
     /// </summary>
     public void LogError(string message, Exception? ex = null)
     {
-        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
+        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [ERROR] {message}";
         if (ex != null)
         {
-            line += Environment.NewLine + ex.ToString();
+            line += Environment.NewLine + $"  类型: {ex.GetType().FullName}";
+            line += Environment.NewLine + $"  消息: {ex.Message}";
+            if (ex.StackTrace != null)
+            {
+                line += Environment.NewLine + $"  堆栈:{Environment.NewLine}{ex.StackTrace}";
+            }
+            if (ex.InnerException != null)
+            {
+                line += Environment.NewLine + $"  内部异常: {ex.InnerException.GetType().FullName}: {ex.InnerException.Message}";
+                if (ex.InnerException.StackTrace != null)
+                {
+                    line += Environment.NewLine + $"  内部堆栈:{Environment.NewLine}{ex.InnerException.StackTrace}";
+                }
+            }
         }
         AppendToFile(_errorLogPath, line);
     }
@@ -50,6 +63,32 @@ public class FileLogger
     {
         var message = context != null ? $"{context}: {ex.Message}" : ex.Message;
         LogError(message, ex);
+    }
+
+    /// <summary>
+    /// 记录致命异常（未捕获异常）
+    /// </summary>
+    public void LogFatal(string message, Exception? ex = null)
+    {
+        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [FATAL] {message}";
+        if (ex != null)
+        {
+            line += Environment.NewLine + $"  类型: {ex.GetType().FullName}";
+            line += Environment.NewLine + $"  消息: {ex.Message}";
+            if (ex.StackTrace != null)
+            {
+                line += Environment.NewLine + $"  堆栈:{Environment.NewLine}{ex.StackTrace}";
+            }
+            if (ex.InnerException != null)
+            {
+                line += Environment.NewLine + $"  内部异常: {ex.InnerException.GetType().FullName}: {ex.InnerException.Message}";
+                if (ex.InnerException.StackTrace != null)
+                {
+                    line += Environment.NewLine + $"  内部堆栈:{Environment.NewLine}{ex.InnerException.StackTrace}";
+                }
+            }
+        }
+        AppendToFile(_errorLogPath, line);
     }
 
     private void AppendToFile(string path, string content)
