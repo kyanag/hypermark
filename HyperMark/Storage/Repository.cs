@@ -29,13 +29,16 @@ public class Repository
     #region 链接操作
 
     public Link? GetLinkByUrl(string url) => _storage.GetLinkByUrl(url);
+    public Link? GetLinkByHyperId(string hyperId) => _storage.GetLinkByHyperId(hyperId);
     public bool AddLink(Link link) => _storage.AddLink(link);
     public bool UpdateLinkCategory(string url, string category) => _storage.UpdateLinkCategory(url, category);
     public bool UpdateLinkTitle(string url, string title) => _storage.UpdateLinkTitle(url, title);
     public bool UpdateLinkPage(string url, Page page) => _storage.UpdateLinkPage(url, page);
+    public bool UpdateLinkValues(string url, Dictionary<string, object>? values) => _storage.UpdateLinkValues(url, values);
     public List<Link> GetLinks(string? category = null) => _storage.GetLinks(category);
     public List<Link> GetLinksBySite(string siteName) => _storage.GetLinksBySite(siteName);
     public bool DeleteLink(string url) => _storage.DeleteLink(url);
+    public bool DeleteLinkByHyperId(string hyperId) => _storage.DeleteLinkByHyperId(hyperId);
 
     #endregion
 

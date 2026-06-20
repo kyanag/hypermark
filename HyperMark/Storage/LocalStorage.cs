@@ -190,6 +190,22 @@ public class LocalStorage : IStorage
         return null;
     }
 
+    public Link? GetLinkByHyperId(string hyperId)
+    {
+        foreach (var file in Directory.GetFiles(_bookmarksDir, "*.json", SearchOption.AllDirectories))
+        {
+            try
+            {
+                var json = File.ReadAllText(file, Encoding.UTF8);
+                var entry = JsonSerializer.Deserialize(json, HyperMarkJsonContext.Instance.JsonBookmarkEntry);
+                if (entry?.Page != null && entry.Page.HyperId == hyperId)
+                    return ToLink(entry);
+            }
+            catch { }
+        }
+        return null;
+    }
+
     public bool AddLink(Link link)
     {
         // 检查是否已存在
@@ -211,7 +227,8 @@ public class LocalStorage : IStorage
             CreatedAt = link.CreatedAt,
             Category = link.Category,
             Tags = link.Tags,
-            Page = link.Page
+            Page = link.Page,
+            Values = link.Values
         };
 
         AtomicWrite(filePath, JsonSerializer.Serialize(entry, HyperMarkJsonContext.Instance.JsonBookmarkEntry));
@@ -261,6 +278,16 @@ public class LocalStorage : IStorage
         if (entry == null || file == null) return false;
 
         entry.Tags = tags;
+        AtomicWrite(file, JsonSerializer.Serialize(entry, HyperMarkJsonContext.Instance.JsonBookmarkEntry));
+        return true;
+    }
+
+    public bool UpdateLinkValues(string url, Dictionary<string, object>? values)
+    {
+        var (file, entry) = FindLinkByUrl(url);
+        if (entry == null || file == null) return false;
+
+        entry.Values = values;
         AtomicWrite(file, JsonSerializer.Serialize(entry, HyperMarkJsonContext.Instance.JsonBookmarkEntry));
         return true;
     }
@@ -328,6 +355,25 @@ public class LocalStorage : IStorage
                 var json = File.ReadAllText(file, Encoding.UTF8);
                 var entry = JsonSerializer.Deserialize(json, HyperMarkJsonContext.Instance.JsonBookmarkEntry);
                 if (entry?.Url == url)
+                {
+                    File.Delete(file);
+                    return true;
+                }
+            }
+            catch { }
+        }
+        return false;
+    }
+
+    public bool DeleteLinkByHyperId(string hyperId)
+    {
+        foreach (var file in Directory.GetFiles(_bookmarksDir, "*.json", SearchOption.AllDirectories))
+        {
+            try
+            {
+                var json = File.ReadAllText(file, Encoding.UTF8);
+                var entry = JsonSerializer.Deserialize(json, HyperMarkJsonContext.Instance.JsonBookmarkEntry);
+                if (entry?.Page != null && entry.Page.HyperId == hyperId)
                 {
                     File.Delete(file);
                     return true;
@@ -638,7 +684,8 @@ public class LocalStorage : IStorage
             CreatedAt = entry.CreatedAt,
             Category = entry.Category,
             Tags = entry.Tags ?? new(),
-            Page = entry.Page
+            Page = entry.Page,
+            Values = entry.Values
         };
     }
 

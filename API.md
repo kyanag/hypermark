@@ -103,6 +103,7 @@ POST /api/unmark
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `url` | string | 是 | 要移除的链接 |
+| `force` | bool | 否 | 为 `true` 时按 HyperId 匹配删除（默认 `false`，仅按 URL 删除） |
 
 **响应：**
 - `200 OK` — 取消收藏成功
@@ -123,22 +124,42 @@ GET /api/is_marked?url=xxx
 |------|------|------|------|
 | `url` | string | 是 | 要检查的 URL |
 
+**匹配逻辑：** 先按 URL 精确匹配，未命中则解析 URL 获取 HyperId 再匹配。
+
 **响应：**
+
+| status | 含义 |
+|--------|------|
+| `0` (No) | 未收藏 |
+| `1` (Half) | 已收藏，通过 HyperId 匹配（URL 不同） |
+| `3` (Full) | 已收藏，URL 完全一致 |
 
 未收藏：
 ```json
-{ "marked": false }
+{ "status": 0 }
 ```
 
-已收藏：
+已收藏（URL 精确匹配）：
 ```json
 {
-  "marked": true,
+  "status": 3,
   "link": {
     "url": "https://example.com/page",
     "title": "页面标题",
     "category": "默认分类",
-    "createdAt": "2026-06-06T10:00:00",
+    "tags": ["tag1", "tag2"]
+  }
+}
+```
+
+已收藏（HyperId 匹配，URL 不同）：
+```json
+{
+  "status": 1,
+  "link": {
+    "url": "https://example.com/page",
+    "title": "页面标题",
+    "category": "默认分类",
     "tags": ["tag1", "tag2"]
   }
 }

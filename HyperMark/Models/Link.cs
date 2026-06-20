@@ -41,4 +41,9 @@ public class Link
     /// </summary>
     public List<string> Tags { get; set; } = [];
 
+    /// <summary>
+    /// 扩展数据，存储链接的非核心元数据
+    /// </summary>
+    public Dictionary<string, object>? Values { get; set; }
+
 }

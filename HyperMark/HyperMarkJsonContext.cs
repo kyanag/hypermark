@@ -91,6 +91,7 @@ public class JsonBookmarkEntry
     public string Category { get; set; } = string.Empty;
     public List<string> Tags { get; set; } = new();
     public Page? Page { get; set; }
+    public Dictionary<string, object>? Values { get; set; }
 }
 
 /// <summary>

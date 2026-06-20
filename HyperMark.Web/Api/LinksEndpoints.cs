@@ -31,7 +31,8 @@ public static class LinksEndpoints
                 Title = string.IsNullOrEmpty(body.Title) ? body.Url : body.Title,
                 CreatedAt = DateTime.Now,
                 Category = body.Category ?? string.Empty,
-                Tags = body.Tags ?? new List<string>()
+                Tags = body.Tags ?? new List<string>(),
+                Values = body.Values
             };
             repo.AddLink(link);
 
@@ -49,15 +50,34 @@ public static class LinksEndpoints
             return Results.Created($"/api/links", link);
         });
 
-        group.MapGet("", (string? site, string? category, string? tag, int? limit, int? offset, Repository repo) =>
+        group.MapGet("", (string? site, string? category, string? tag, string? route, string[]? tags, string? q, int? limit, int? offset, Repository repo) =>
         {
             List<Link> links;
             if (!string.IsNullOrEmpty(site)) links = repo.GetLinksBySite(site);
             else if (!string.IsNullOrEmpty(category)) links = repo.GetLinks(category);
             else links = repo.GetLinks();
 
+            // 单标签筛选（兼容旧接口）
             if (!string.IsNullOrEmpty(tag))
                 links = links.Where(l => l.Tags.Contains(tag)).ToList();
+
+            // 多标签筛选（AND 逻辑）
+            if (tags is { Length: > 0 })
+                links = links.Where(l => tags.All(t => l.Tags.Contains(t))).ToList();
+
+            // 路由筛选
+            if (!string.IsNullOrEmpty(route))
+                links = links.Where(l => l.Page?.Route == route).ToList();
+
+            // 关键字搜索（标题和URL）
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var keyword = q.Trim();
+                links = links.Where(l =>
+                    l.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                    l.Url.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+            }
 
             var total = links.Count;
             var safeOffset = Math.Max(0, offset ?? 0);
@@ -107,6 +127,11 @@ public static class LinksEndpoints
                     }
                     if (tag != null) repo.AddLinkTag(url, tag.Id);
                 }
+            }
+            if (body.Values != null)
+            {
+                link.Values = body.Values;
+                repo.UpdateLinkValues(url, body.Values);
             }
             return Results.Ok(new LinkUpdatedResponse("更新成功", link));
         });

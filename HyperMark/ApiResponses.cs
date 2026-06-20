@@ -1,4 +1,5 @@
 using HyperMark.Models;
+using HyperMark.Storage;
 
 namespace HyperMark;
 
@@ -15,7 +16,7 @@ public record TagBrief(int Id, string Name, string Title);
 
 // 收藏
 public record MarkLinkInfo(string Url, string Title, string Category, List<string> Tags);
-public record MarkStatusResponse(bool Marked, MarkLinkInfo? Link = null);
+public record MarkStatusResponse(MarkStatus Status, MarkLinkInfo? Link = null);
 public record MarkCreatedResponse(string Message, MarkLinkInfo Link);
 
 // 链接

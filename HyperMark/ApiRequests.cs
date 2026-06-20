@@ -13,11 +13,13 @@ public class MarkShortcutRequest
     public string? Title { get; set; }
     public string? Category { get; set; }
     public List<string>? Tags { get; set; }
+    public Dictionary<string, object>? Values { get; set; }
 }
 
 public class UnmarkShortcutRequest
 {
     public string Url { get; set; } = string.Empty;
+    public bool Force { get; set; }
 }
 
 // Sites
@@ -42,6 +44,7 @@ public class CreateLinkRequest
     public string? Title { get; set; }
     public string? Category { get; set; }
     public List<string>? Tags { get; set; }
+    public Dictionary<string, object>? Values { get; set; }
 }
 
 public class UpdateLinkRequest
@@ -49,6 +52,7 @@ public class UpdateLinkRequest
     public string? Title { get; set; }
     public string? Category { get; set; }
     public List<string>? Tags { get; set; }
+    public Dictionary<string, object>? Values { get; set; }
 }
 
 public class AddLinkTagsRequest

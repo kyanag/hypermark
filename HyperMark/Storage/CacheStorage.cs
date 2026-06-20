@@ -17,6 +17,7 @@ public class CacheStorage : IStorage
     private readonly Dictionary<int, Tag> _tags = new();
     private readonly Dictionary<string, string> _domainCnames = new();
     private readonly Dictionary<string, Link> _linksByUrl = new();
+    private readonly Dictionary<string, Link> _linksByHyperId = new();
     private readonly Dictionary<string, List<Link>> _linksByCategory = new();
     private readonly Dictionary<string, List<Link>> _linksBySite = new();
     private readonly Dictionary<string, List<Link>> _linksByTag = new();
@@ -58,6 +59,8 @@ public class CacheStorage : IStorage
     private void AddLinkToIndex(Link link)
     {
         _linksByUrl[link.Url] = link;
+        if (link.Page != null && !string.IsNullOrEmpty(link.Page.HyperId))
+            _linksByHyperId[link.Page.HyperId] = link;
         if (!string.IsNullOrEmpty(link.Category))
             AddToGroup(_linksByCategory, link.Category, link);
         else
@@ -143,6 +146,8 @@ public class CacheStorage : IStorage
                 foreach (var l in links)
                 {
                     _linksByUrl.Remove(l.Url);
+                    if (l.Page != null && !string.IsNullOrEmpty(l.Page.HyperId))
+                        _linksByHyperId.Remove(l.Page.HyperId);
                     RemoveLinkFromIndex(_linksByCategory, l.Category, l.Url);
                     foreach (var t in l.Tags)
                         RemoveLinkFromIndex(_linksByTag, t, l.Url);
@@ -190,6 +195,12 @@ public class CacheStorage : IStorage
         lock (_lock) return _linksByUrl.TryGetValue(url, out var l) ? l : null;
     }
 
+    public Link? GetLinkByHyperId(string hyperId)
+    {
+        EnsureLoaded();
+        lock (_lock) return _linksByHyperId.TryGetValue(hyperId, out var l) ? l : null;
+    }
+
     public bool AddLink(Link link)
     {
         SyncBuiltInTags(link);
@@ -232,7 +243,13 @@ public class CacheStorage : IStorage
         lock (_lock)
         {
             if (!_linksByUrl.TryGetValue(url, out var link)) return false;
+            // 移除旧 HyperId 索引
+            if (link.Page != null && !string.IsNullOrEmpty(link.Page.HyperId))
+                _linksByHyperId.Remove(link.Page.HyperId);
             link.Page = page;
+            // 添加新 HyperId 索引
+            if (!string.IsNullOrEmpty(page.HyperId))
+                _linksByHyperId[page.HyperId] = link;
             SyncBuiltInTags(link);
             _linksByUrl[url] = link;
         }
@@ -251,6 +268,18 @@ public class CacheStorage : IStorage
             InvalidateTagIndex(link);
             foreach (var t in link.Tags)
                 AddToGroup(_linksByTag, t, link);
+            _linksByUrl[url] = link;
+        }
+        return true;
+    }
+
+    public bool UpdateLinkValues(string url, Dictionary<string, object>? values)
+    {
+        if (!_inner.UpdateLinkValues(url, values)) return false;
+        lock (_lock)
+        {
+            if (!_linksByUrl.TryGetValue(url, out var link)) return false;
+            link.Values = values;
             _linksByUrl[url] = link;
         }
         return true;
@@ -286,10 +315,28 @@ public class CacheStorage : IStorage
         {
             if (!_linksByUrl.TryGetValue(url, out var link)) return true;
             _linksByUrl.Remove(url);
+            if (link.Page != null && !string.IsNullOrEmpty(link.Page.HyperId))
+                _linksByHyperId.Remove(link.Page.HyperId);
             InvalidateTagIndex(link);
             RemoveLinkFromIndex(_linksByCategory, link.Category, url);
             if (link.Page != null)
                 RemoveLinkFromIndex(_linksBySite, link.Page.Site, url);
+        }
+        return true;
+    }
+
+    public bool DeleteLinkByHyperId(string hyperId)
+    {
+        if (!_inner.DeleteLinkByHyperId(hyperId)) return false;
+        lock (_lock)
+        {
+            if (!_linksByHyperId.TryGetValue(hyperId, out var link)) return true;
+            _linksByHyperId.Remove(hyperId);
+            _linksByUrl.Remove(link.Url);
+            InvalidateTagIndex(link);
+            RemoveLinkFromIndex(_linksByCategory, link.Category, link.Url);
+            if (link.Page != null)
+                RemoveLinkFromIndex(_linksBySite, link.Page.Site, link.Url);
         }
         return true;
     }

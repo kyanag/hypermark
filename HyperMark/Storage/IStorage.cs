@@ -57,6 +57,11 @@ public interface IStorage
     public Link? GetLinkByUrl(string url);
 
     /// <summary>
+    /// 根据 HyperId 查找链接
+    /// </summary>
+    public Link? GetLinkByHyperId(string hyperId);
+
+    /// <summary>
     /// 添加链接（可包含解析后的 Page 信息）
     /// </summary>
     public bool AddLink(Link link);
@@ -82,14 +87,24 @@ public interface IStorage
     public bool UpdateLinkTags(string url, List<string> tags);
 
     /// <summary>
+    /// 更新链接的扩展数据
+    /// </summary>
+    public bool UpdateLinkValues(string url, Dictionary<string, object>? values);
+
+    /// <summary>
     /// 获取所有链接（可按分类筛选）
     /// </summary>
     public List<Link> GetLinks(string? category = null);
 
     /// <summary>
-    /// 删除链接
+    /// 根据 URL 删除链接
     /// </summary>
     public bool DeleteLink(string url);
+
+    /// <summary>
+    /// 根据 HyperId 删除链接
+    /// </summary>
+    public bool DeleteLinkByHyperId(string hyperId);
 
     #endregion
 

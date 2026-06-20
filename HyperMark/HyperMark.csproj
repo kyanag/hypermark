@@ -7,6 +7,11 @@
     <RootNamespace>HyperMark</RootNamespace>
   </PropertyGroup>
 
+  <!-- Release 配置下禁用 PDB 生成 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <!-- 编译时生成版本常量类 -->
   <Target Name="GenerateVersionConstants" BeforeTargets="CoreCompile" Inputs="$(MSBuildThisFileFullPath)" Outputs="$(IntermediateOutputPath)VersionConstants.g.cs">
     <ItemGroup>

@@ -17,7 +17,7 @@
 
 - .NET 10.0（LTS）
 - ASP.NET Core Minimal API
-- Avalonia UI 11.x（桌面端，支持 AOT 编译）
+- Avalonia UI 12.x（桌面端，支持 AOT 编译）
 - 文件系统存储（无数据库依赖）
 
 ## 项目结构
@@ -119,8 +119,8 @@ dotnet publish HyperMark.Desktop/HyperMark.Desktop.csproj -c Release -r win-x64 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `POST` | `/api/mark` | 快捷收藏（url, title?, category?, tags?） |
-| `POST` | `/api/unmark` | 取消收藏 |
-| `GET` | `/api/is_marked?url=` | 检查是否已收藏 |
+| `POST` | `/api/unmark` | 取消收藏（url, force? — force=true 时按 HyperId 匹配删除） |
+| `GET` | `/api/is_marked?url=` | 检查是否已收藏（返回 MarkStatus: 0=未收藏, 1=HyperId匹配, 3=URL匹配） |
 
 ### 站点
 
@@ -140,8 +140,16 @@ dotnet publish HyperMark.Desktop/HyperMark.Desktop.csproj -c Release -r win-x64 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `POST` | `/api/links` | 创建链接 |
-| `GET` | `/api/links?site=&category=&tag=&limit=&offset=` | 查询链接（分页） |
+| `GET` | `/api/links?site=&category=&tag=&tags=&route=&q=&limit=&offset=` | 查询链接（分页） |
 | `GET` | `/api/links/{url}` | 获取链接详情 |
+
+**查询参数说明**：
+- `site` - 按站点名筛选
+- `category` - 按分类筛选
+- `tag` - 按单个标签筛选（兼容旧接口）
+- `tags` - 按多个标签筛选（AND 逻辑，链接必须包含所有指定标签）
+- `route` - 按路由筛选（匹配 `page.route` 字段）
+- `q` - 关键字搜索（匹配标题或 URL，不区分大小写）
 | `PUT` | `/api/links/{url}` | 更新链接 |
 | `DELETE` | `/api/links/{url}` | 删除链接 |
 | `GET` | `/api/links/{url}/tags` | 获取链接标签 |
@@ -351,4 +359,8 @@ curl -X POST http://localhost:5000/api/categories \
 
 # 解析 URL
 curl "http://localhost:5000/api/parse?url=https%3A%2F%2Fgithub.com%2Fuser%2Frepo"
+
+# 查询链接（带筛选）
+curl "http://localhost:5000/api/links?route=repo/{owner}/{name}&tags=starred&tags=important"
+curl "http://localhost:5000/api/links?q=github"
 ```

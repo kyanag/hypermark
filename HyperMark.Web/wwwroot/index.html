@@ -886,6 +886,7 @@ function renderLinkList(links) {
       <td style="font-size:0.82rem;color:#888">${time}</td>
       <td class="actions">
         <button class="btn btn-icon btn-sm btn-default" onclick="editLinkTags('${esc(l.url)}')" title="管理标签">🏷️</button>
+        <button class="btn btn-icon btn-sm btn-default" onclick="editLinkValues('${esc(l.url)}')" title="扩展数据">📝</button>
         <button class="btn btn-icon btn-sm btn-default" onclick="moveLink('${esc(l.url)}')" title="移动分类">📂</button>
         <button class="btn btn-icon btn-sm btn-default" onclick="parseSingleLink('${esc(l.url)}')" title="解析">🔄</button>
         <button class="btn btn-icon btn-sm btn-danger" onclick="deleteLink('${esc(l.url)}')" title="删除">✕</button>
@@ -1061,6 +1062,61 @@ async function addNewLinkTag(url) {
     document.getElementById('newLinkTag').value = '';
     loadLinks();
     editLinkTags(url);
+  } catch (e) {}
+}
+
+// 链接扩展数据管理
+async function editLinkValues(url) {
+  const link = allLinks.find(l => l.url === url);
+  if (!link) return;
+  const values = link.values || null;
+  const jsonStr = values ? JSON.stringify(values, null, 2) : '';
+
+  let bodyHtml = `<div style="margin-bottom:8px;font-size:0.85rem;color:#666;word-break:break-all">${esc(url)}</div>`;
+  bodyHtml += '<div class="form-group"><label>扩展数据（JSON 格式）</label>';
+  bodyHtml += `<textarea id="editValuesJson" style="width:100%;min-height:200px;font-family:monospace;font-size:0.85rem;padding:8px;border:1px solid #d9d9d9;border-radius:4px;" placeholder='{"key": "value", ...}'>${esc(jsonStr)}</textarea>`;
+  bodyHtml += '</div>';
+
+  showModal('编辑扩展数据', bodyHtml, `
+    <button class="btn btn-default" onclick="closeModal()">取消</button>
+    <button class="btn btn-danger" onclick="clearLinkValues('${esc(url)}')">清空</button>
+    <button class="btn btn-primary" onclick="saveLinkValues('${esc(url)}')">保存</button>`);
+}
+
+async function saveLinkValues(url) {
+  const jsonStr = document.getElementById('editValuesJson').value.trim();
+  let values = null;
+  if (jsonStr) {
+    try {
+      values = JSON.parse(jsonStr);
+      if (typeof values !== 'object' || values === null || Array.isArray(values)) {
+        return toast('请输入 JSON 对象（如 {"key": "value"}）', 'error');
+      }
+    } catch (e) {
+      return toast('JSON 格式错误: ' + e.message, 'error');
+    }
+  }
+  try {
+    await api('/api/links/' + encodeURIComponent(url), {
+      method: 'PUT',
+      body: JSON.stringify({ values })
+    });
+    toast('扩展数据保存成功');
+    closeModal();
+    loadLinks();
+  } catch (e) {}
+}
+
+async function clearLinkValues(url) {
+  if (!confirm('确定清空该链接的扩展数据吗？')) return;
+  try {
+    await api('/api/links/' + encodeURIComponent(url), {
+      method: 'PUT',
+      body: JSON.stringify({ values: {} })
+    });
+    toast('扩展数据已清空');
+    closeModal();
+    loadLinks();
   } catch (e) {}
 }
 

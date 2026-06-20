@@ -169,6 +169,7 @@ GetCategoryPath(categoryName):
 | `GetSitePages(string)` | 扫描 `bookmarks/` 所有 JSON，过滤 `entry.Page.Site == siteName` 的记录 |
 | `UpdateLinkCategory(string, string)` | 读取原 JSON -> 修改 category -> 移动到新目录 -> 删除原文件 |
 | `DeleteLink(string)` | 遍历所有 JSON 文件匹配 url 字段 -> 删除 |
+| `DeleteLinkByHyperId(string)` | 遍历所有 JSON 文件匹配 `entry.Page.HyperId` 字段 -> 删除 |
 | `DeleteSite(string)` | 扫描 `bookmarks/` 所有 JSON，过滤 `entry.Page.Site == siteName`，批量删除 |
 | `DeletePage(string, string)` | 遍历所有 JSON 匹配 Site+HyperId -> 删除 |
 | `IsMarked(Page)` | 遍历所有 JSON 文件，匹配 Site+HyperId（Full）或 Site+Std（Half） |

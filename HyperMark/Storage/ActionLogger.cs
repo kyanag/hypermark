@@ -52,6 +52,7 @@ public class ActionLogger : IStorage
     public List<Link> GetLinksBySite(string siteName) => _inner.GetLinksBySite(siteName);
 
     public Link? GetLinkByUrl(string url) => _inner.GetLinkByUrl(url);
+    public Link? GetLinkByHyperId(string hyperId) => _inner.GetLinkByHyperId(hyperId);
 
     public bool AddLink(Link link)
     {
@@ -67,6 +68,7 @@ public class ActionLogger : IStorage
     public bool UpdateLinkTitle(string url, string title) => _inner.UpdateLinkTitle(url, title);
     public bool UpdateLinkPage(string url, Page page) => _inner.UpdateLinkPage(url, page);
     public bool UpdateLinkTags(string url, List<string> tags) => _inner.UpdateLinkTags(url, tags);
+    public bool UpdateLinkValues(string url, Dictionary<string, object>? values) => _inner.UpdateLinkValues(url, values);
     public List<Link> GetLinks(string? category = null) => _inner.GetLinks(category);
 
     public bool DeleteLink(string url)
@@ -75,6 +77,16 @@ public class ActionLogger : IStorage
         if (result)
         {
             Log(_linkLogPath, "delete_link", $"{{\"Url\":\"{EscapeJson(url)}\"}}");
+        }
+        return result;
+    }
+
+    public bool DeleteLinkByHyperId(string hyperId)
+    {
+        var result = _inner.DeleteLinkByHyperId(hyperId);
+        if (result)
+        {
+            Log(_linkLogPath, "delete_link_by_hyperid", $"{{\"HyperId\":\"{EscapeJson(hyperId)}\"}}");
         }
         return result;
     }

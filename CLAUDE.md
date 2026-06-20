@@ -124,9 +124,17 @@ HyperMark.Desktop/
 装饰器模式组装链：`LocalStorage` → `CacheStorage` → `ActionLogger` → `Repository`
 
 - **LocalStorage**：纯文件系统，原子写入（.tmp + File.Move）
-- **CacheStorage**：内存缓存，多维索引（URL/分类/站点/标签）
+- **CacheStorage**：内存缓存，多维索引（URL/HyperId/分类/站点/标签）
 - **ActionLogger**：记录写操作到 .actions 文件，支持 ReplayLinks 数据恢复
 - **Repository**：业务验证（分类树防循环等）
+
+### 链接删除
+
+链接删除有两个独立入口，分别按不同维度定位链接：
+- `DeleteLink(string url)`：根据原始 URL 删除
+- `DeleteLinkByHyperId(string hyperId)`：根据 HyperId（`site://std_url`）删除
+
+CacheStorage 维护 `_linksByHyperId` 索引，两种删除方式都会同步清理所有相关索引。
 
 ## 启动方式
 

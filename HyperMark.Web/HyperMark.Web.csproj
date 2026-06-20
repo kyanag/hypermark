@@ -13,6 +13,11 @@
     <NoWarn>$(NoWarn);IL2026;IL3050</NoWarn>
   </PropertyGroup>
 
+  <!-- Release 配置下禁用 PDB 生成 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
   </ItemGroup>
