@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-desktop:
+    strategy:
+      matrix:
+        include:
+          - name: aot
+            artifact: desktop-aot
+            publish-args: -p:PublishAot=true -p:InvariantGlobalization=true -p:StripSymbols=true
+          - name: framework-dependent
+            artifact: desktop-framework-dependent
+            publish-args: -p:PublishAot=false -p:SelfContained=false
+          - name: self-contained
+            artifact: desktop-self-contained
+            publish-args: -p:PublishAot=false -p:SelfContained=true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish Desktop (${{ matrix.name }})
+        run: >
+          dotnet publish HyperMark.Desktop/HyperMark.Desktop.csproj
+          -c Release
+          -r win-x64
+          -o ./publish-desktop
+          ${{ matrix.publish-args }}
+
+      - name: Create zip archive
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ./publish-desktop/* -DestinationPath ./HyperMark-${{ matrix.artifact }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ./HyperMark-${{ matrix.artifact }}.zip
+
+  release:
+    needs: [build-desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "body=Initial release" >> $GITHUB_OUTPUT
+          else
+            NOTES=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            {
+              echo "body<<EOF"
+              echo "$NOTES"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## 下载
+
+            | 文件 | 说明 |
+            |------|------|
+            | `HyperMark-desktop-aot.zip` | 桌面应用 AOT 版（推荐，无需安装 .NET，启动快） |
+            | `HyperMark-desktop-self-contained.zip` | 桌面应用独立版（携带运行时，无需安装 .NET） |
+            | `HyperMark-desktop-framework-dependent.zip` | 桌面应用框架依赖版（需安装 .NET 10.0，体积小） |
+
+            ---
+            ${{ steps.notes.outputs.body }}
+          files: |
+            ./artifacts/desktop-aot/HyperMark-desktop-aot.zip
+            ./artifacts/desktop-self-contained/HyperMark-desktop-self-contained.zip
+            ./artifacts/desktop-framework-dependent/HyperMark-desktop-framework-dependent.zip
